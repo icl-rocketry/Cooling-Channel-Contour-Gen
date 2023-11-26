@@ -1,0 +1,167 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Nov 25 22:24:39 2023
+
+@author: Leander
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import math
+
+
+r = np.load('r.npy')
+r *= 1000
+r += 1.5
+z = 1000*np.load('z.npy')
+hc=np.load('hc.npy') * 1000
+phi = [0.03*i for i in range(len(r))] #baseline phi
+
+
+
+############################################
+
+def dotproduct(v1, v2):
+  return sum((a*b) for a, b in zip(v1, v2))
+
+def length(v):
+  return math.sqrt(dotproduct(v, v))
+
+def Vangle(v1, v2):
+  return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))
+
+x = [r[i] * np.sin(angle) for i,angle in enumerate(phi)]
+y = [r[i] * np.cos(angle) for i,angle in enumerate(phi)]
+
+def channel_points(x_p,y_p, hc):
+    #hc = np.interp(r, [r_list.min(),r_list.max()], [h0-hct,h0])
+    a0 = 4
+    hc = hc
+    r0 = 50
+    deltaphi = a0/r0
+    r = (x_p**2 + y_p**2)**0.5
+    phi = np.arctan2(y_p,x_p)
+    x1 = r * np.cos(phi)
+    x2 = r * np.cos(phi-deltaphi)
+    x3 = (r+hc) * np.cos(phi)
+    x4 = (r+hc) * np.cos(phi-deltaphi)
+    y1 = r * np.sin(phi)
+    y2 = r * np.sin(phi-deltaphi)
+    y3 = (r+hc) * np.sin(phi)
+    y4 = (r+hc) * np.sin(phi-deltaphi)
+    return [x1,x2,x3,x4,y1,y2,y3,y4]
+
+
+
+
+
+df_big = pd.DataFrame(columns=["x1","x2","x3","x4","y1","y2","y3","y4","z"])
+
+for i in range(len(x)):
+    temp = channel_points(x[i],y[i],hc[i])
+    temp.append(z[i])
+    df_big.loc[i,:] = temp
+
+
+
+def calculate_angle(i): #calculates angle in rad between element i and the next one 
+    x1 =df_big.iloc[i][0:4].mean()
+    x2 =df_big.iloc[i+1][0:4].mean()
+    y1 =df_big.iloc[i][4:8].mean()
+    y2 = df_big.iloc[i+1][4:8].mean()
+    z1 = df_big.iloc[i][-1]
+    z2 = df_big.iloc[i+1][-1]
+    angle = Vangle([x2-x1,y2-y1,z2-z1],[0,0,1])
+    return angle
+
+#### iterative solver start
+for i in range(0,99):
+    delta_base = 0.00005
+    angle = calculate_angle(i)
+    angle = angle*180/np.pi
+    target_angle = 40
+    error = target_angle - angle
+    print(error)
+    n = 0
+    while abs(error) > 1E-4 and n<20000:
+        if abs(error) > 10: 
+            delta = delta_base * 20
+        elif abs(error) > 5:
+            delta = delta_base * 5
+        elif abs(error) > 1:
+            delta = delta_base
+        elif abs(error) > .01:
+            delta = delta_base /100
+        elif abs(error) > .001:
+            delta = delta_base /1000
+        elif abs(error) > .0001:
+            delta = delta_base /10000
+        else: 
+            delta = delta_base / 500000
+            
+        if error > 0:
+            phi[i+1] = phi[i+1] + delta
+        else:
+            phi[i+1] = phi[i+1] - delta
+            
+        x_new = r[i+1] * np.sin(phi[i+1])
+        y_new = r[i+1] * np.cos(phi[i+1])
+        df_big.iloc[i+1] = [*channel_points(x_new,y_new,hc[i+1]),z[i+1]]
+        angle = calculate_angle(i)
+        error = target_angle - angle*180/np.pi
+        if n%350 == 0:
+            print("Step: {}, Substep: {}, Error {}, current Angle: {}, current Phi {}".format(i,n,error,angle*180/np.pi,phi[i+1]))
+        n +=1
+        
+##iterative solver ennd
+#debug
+centerx = []
+centery = []
+centerz = []
+#recalc of center points
+for _,row in df_big.iterrows():
+    centerx.append(row[:4].mean())
+    centery.append(row[4:8].mean())
+    centerz.append(row[-1].mean())
+
+norm = [0,0,1] #z axis
+
+vectors = []
+#getting vectors
+for i in range(len(centerx)-1):
+    pointx =  centerx[i+1] - centerx[i]
+    pointy = centery[i+1] - centery[i]
+    pointz =  centerz[i+1] - centerz[i]
+    vectors.append([pointx,pointy,pointz])
+
+angles = []
+
+#calculating all the angles
+def angle(v1, v2):
+  return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))
+
+for vector in vectors:
+    angles.append(angle(vector,norm))
+
+angles = [angle * 180 / np.pi for angle in angles]
+plt.plot(z[0:99],angles)
+plt.show()
+plt.plot(z,phi)
+
+##debug end
+
+#output coordinate csv 
+df_big *=.1
+df_big.to_csv("surfacetest.csv", index=False, header=False)
+    
+    
+
+
+
+
+
+
+
+
+

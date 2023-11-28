@@ -17,8 +17,7 @@ def run(context):
 
         
         ############# preprocessing ####################
-        h0 = 2
-        a0 = 4
+        a0 = 4.75
         r0 = 50
         phi = a0/r0 #* 180/math.pi
 
@@ -70,6 +69,10 @@ def run(context):
             arcs = sketch.sketchCurves.sketchArcs
             arc1 = arcs.addByCenterStartSweep(arccenterpoint,p1,-phi)
             arc2 = arcs.addByCenterStartSweep(arccenterpoint,p3,-phi)
+            fillet1 = sketch.sketchCurves.sketchArcs.addFillet(line1, p1, arc1, p1, .015)
+            fillet2 = sketch.sketchCurves.sketchArcs.addFillet(line1, p3, arc2, p3, .015)
+            fillet3 = sketch.sketchCurves.sketchArcs.addFillet(line2, p2, arc1, p2, .015)
+            fillet4 = sketch.sketchCurves.sketchArcs.addFillet(line2, p4, arc2, p4, .015)
         
         #lofting
         loftFeats = rootComp.features.loftFeatures

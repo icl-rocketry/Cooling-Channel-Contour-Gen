@@ -11,15 +11,18 @@ import pandas as pd
 import math
 
 
-r = np.load('r.npy')
-r *= 1000
-r += 1.5
-z = 1000*np.load('z.npy')
-hc=np.load('hc.npy') * 1000
+r = np.load('r.npy') #load radius contour
+r *= 1000 #convert to mm
+z = 1000*np.load('z.npy') #load z coords
+hc=np.load('hc.npy') * 1000 #load channel height and conv to mm
+h = np.load('h.npy')*1000 # load gas side wall thickness in mm
+a = np.load('a.npy')*1000 #load coolant channel width in mm
+r= r+h #add wall thickness to get radius of coolant side wall 
+
+a0 = a[0] #get coolant channel radius at cc
+r0= r[0] #get cc radius
+
 phi = [0.03*i for i in range(len(r))] #baseline phi
-
-
-
 ############################################
 
 def dotproduct(v1, v2):
@@ -36,9 +39,7 @@ y = [r[i] * np.cos(angle) for i,angle in enumerate(phi)]
 
 def channel_points(x_p,y_p, hc):
     #hc = np.interp(r, [r_list.min(),r_list.max()], [h0-hct,h0])
-    a0 = 4
     hc = hc
-    r0 = 50
     deltaphi = a0/r0
     r = (x_p**2 + y_p**2)**0.5
     phi = np.arctan2(y_p,x_p)
@@ -75,16 +76,29 @@ def calculate_angle(i): #calculates angle in rad between element i and the next 
     angle = Vangle([x2-x1,y2-y1,z2-z1],[0,0,1])
     return angle
 
+def target_function(i):
+    OUTPUT = min(35, i * 4 - 20, (i-98) * -2+15)
+    if OUTPUT < 0:
+        OUTPUT = 0
+    return OUTPUT
+target_function = np.vectorize(target_function)
+#plt.plot(np.linspace(0, 99, 100), target_function(np.linspace(0, 99, 100)))
+
+
+r_pt_phc0 = r + hc
+r_pt_phc1 = [(row[2]**2+row[6]**2)**0.5 for _,row in df_big.iterrows()]
+    
+
 #### iterative solver start
 for i in range(0,99):
     delta_base = 0.00005
     angle = calculate_angle(i)
     angle = angle*180/np.pi
-    target_angle = 40
+    target_angle = target_function(i)
     error = target_angle - angle
-    print(error)
+    #print(error)
     n = 0
-    while abs(error) > 1E-4 and n<20000:
+    while abs(error) > 1E-4 and n<25000:
         if abs(error) > 10: 
             delta = delta_base * 20
         elif abs(error) > 5:
@@ -110,9 +124,10 @@ for i in range(0,99):
         df_big.iloc[i+1] = [*channel_points(x_new,y_new,hc[i+1]),z[i+1]]
         angle = calculate_angle(i)
         error = target_angle - angle*180/np.pi
-        if n%350 == 0:
-            print("Step: {}, Substep: {}, Error {}, current Angle: {}, current Phi {}".format(i,n,error,angle*180/np.pi,phi[i+1]))
+        #if n%350 == 0:
+            #print("Step: {}, Substep: {}, Error {}, current Angle: {}, current Phi {}".format(i,n,error,angle*180/np.pi,phi[i+1]))
         n +=1
+    print("Target angle " + str(target_angle) + " Final angle " + str(angle * 180 / np.pi))
         
 ##iterative solver ennd
 #debug
@@ -153,8 +168,8 @@ plt.plot(z,phi)
 
 #output coordinate csv 
 df_big *=.1
+df_big['phi'] = a0/r0
 df_big.to_csv("surfacetest.csv", index=False, header=False)
-    
     
 
 

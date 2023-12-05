@@ -17,9 +17,11 @@ def run(context):
 
         
         ############# preprocessing ####################
-        a0 = 4.75
-        r0 = 50
-        phi = a0/r0 #* 180/math.pi
+        phi = 0
+        with open('C:\\Users\\Leander\\Documents\\iclr\\F360Skripts\\CC-SurfaceGenerator\\surfacetest.csv', 'r') as file:
+            my_reader = csv.reader(file, delimiter=',')
+            phi = float(next(my_reader)[9])
+        
 
         x1 = []
         x2 = []

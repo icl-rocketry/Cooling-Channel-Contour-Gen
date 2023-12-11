@@ -18,7 +18,7 @@ def run(context):
         
         ############# preprocessing ####################
         phi = 0
-        with open('C:\\Users\\Leander\\Documents\\iclr\\F360Skripts\\CC-SurfaceGenerator\\surfacetest.csv', 'r') as file:
+        with open('C:\\Users\\Martin\\OfflineOnly\\ICLR\\Cooling-Channel-Contour-Gen\\surfacetest.csv', 'r') as file:
             my_reader = csv.reader(file, delimiter=',')
             phi = float(next(my_reader)[9])
         
@@ -33,7 +33,7 @@ def run(context):
         y4 = []
         z = []
 
-        with open('C:\\Users\\Leander\\Documents\\iclr\\F360Skripts\\CC-SurfaceGenerator\\surfacetest.csv', 'r') as file:
+        with open('C:\\Users\\Martin\\OfflineOnly\\ICLR\\Cooling-Channel-Contour-Gen\\surfacetest.csv', 'r') as file:
             my_reader = csv.reader(file, delimiter=',')
             for row in my_reader:
                 x1.append(float(row[0]))

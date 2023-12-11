@@ -11,13 +11,21 @@ import pandas as pd
 import math
 
 
-r = np.load('r.npy') #load radius contour
-r *= 1000 #convert to mm
-z = 1000*np.load('z.npy') #load z coords
+r = np.load('r.npy') * 1000 #load radius contour
+z = 1000*np.load('z.npy') + 15.1#load z coords
 hc=np.load('hc.npy') * 1000 #load channel height and conv to mm
 h = np.load('h.npy')*1000 # load gas side wall thickness in mm
 a = np.load('a.npy')*1000 #load coolant channel width in mm
-r= r+h #add wall thickness to get radius of coolant side wall 
+#r= r+h #add wall thickness to get radius of coolant side wall 
+
+drdz = np.diff(r)/np.diff(z)
+abs_n = np.hypot(drdz, np.diff(z))
+norm_nx = drdz / abs_n
+norm_ny = np.diff(z) / abs_n
+norm_nx = np.insert(norm_nx, 0, norm_nx[0])
+norm_ny = np.insert(norm_ny, 0, norm_ny[0])
+z = z - norm_nx * h
+r = r + norm_ny * h
 
 a0 = a[0] #get coolant channel radius at cc
 r0= r[0] #get cc radius
@@ -127,7 +135,7 @@ for i in range(0,99):
         #if n%350 == 0:
             #print("Step: {}, Substep: {}, Error {}, current Angle: {}, current Phi {}".format(i,n,error,angle*180/np.pi,phi[i+1]))
         n +=1
-    print("Target angle " + str(target_angle) + " Final angle " + str(angle * 180 / np.pi))
+    print(str(i) + " / 99:" + " Target angle " + str(target_angle) + " Final angle " + str(angle * 180 / np.pi) )
         
 ##iterative solver ennd
 #debug
